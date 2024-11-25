@@ -16,6 +16,7 @@ from itertools import combinations
 DEFAULT_SEED = 42
 defaultKey = random.PRNGKey(DEFAULT_SEED)
 
+
 # NumPy-based generator with MT19937
 def numpy_mt19937_gaussian_generator(seed=DEFAULT_SEED):
     rng = np.random.default_rng(np.random.MT19937(seed))
@@ -25,6 +26,7 @@ def numpy_mt19937_gaussian_generator(seed=DEFAULT_SEED):
 
     return gaussian_generator
 
+
 # JAX-based generator
 def jax_gaussian_generator(seed=DEFAULT_SEED):
     key = random.PRNGKey(seed)
@@ -33,6 +35,7 @@ def jax_gaussian_generator(seed=DEFAULT_SEED):
         return random.normal(key, shape=shape)
 
     return gaussian_generator
+
 
 def gaussianize_matrix(matrix: jnp.ndarray, gaussian_generator) -> jnp.ndarray:
     """
@@ -77,7 +80,7 @@ def calc_I(matrix: jnp.ndarray) -> jnp.float64:
     This function quantifies the degree of integration within the system by comparing the determinant
     of the covariance matrix with the product of its diagonal elements. Higher values indicate more
     integrated relationships among the variables in the system.
-    
+
     Integration:
 
         I(X) = ∑[ H(Xᵢ) ] - H(X)
@@ -85,7 +88,7 @@ def calc_I(matrix: jnp.ndarray) -> jnp.float64:
     Where:
         - H(X) is the entropy of the entire system.
         - H(Xᵢ) is the entropy of each individual variable.
-    
+
     Note: This calculation uses log2, consistent with the original implementation's use of information theory metrics.
     """
     determinant_value = determinant(matrix)
@@ -94,6 +97,7 @@ def calc_I(matrix: jnp.ndarray) -> jnp.float64:
 
     return 0.5 * (diag_log_sum - det_log)
 
+
 def n_choose_k_le_s(n: int, k: int, s: int) -> bool:
     """
     Checks if n choose k is <= s without computing the full value.
@@ -101,7 +105,7 @@ def n_choose_k_le_s(n: int, k: int, s: int) -> bool:
     This function efficiently determines if the combination of n choose k exceeds a given threshold s.
     It stops the computation as soon as the product exceeds s, which helps in avoiding excessive calculations
     when only a comparison is needed. This is useful for determining if exhaustive enumeration is feasible.
-    
+
     Note: This is only accurate up to about <n choose k> < 10^13, which should be more than adequate for most purposes.
     """
     product = 1.0
@@ -112,7 +116,9 @@ def n_choose_k_le_s(n: int, k: int, s: int) -> bool:
     return True
 
 
-def calc_C_k(cov_matrix: jnp.ndarray, I_n: float, k: int, num_samples: int = 1000) -> float:
+def calc_C_k(
+    cov_matrix: jnp.ndarray, I_n: float, k: int, num_samples: int = 1000
+) -> float:
     """
     Calculates Cₖ using a sampled approach for large k to avoid exhaustive computation.
 
@@ -121,9 +127,9 @@ def calc_C_k(cov_matrix: jnp.ndarray, I_n: float, k: int, num_samples: int = 100
     between computational efficiency and accuracy. Edge cases (k = 1 or k = n - 1) are calculated exactly.
 
     Complexity formula (TSE complexity):
-    
+
         Cₙ(X) = ∑[ (k/n) I(X) - ⟨I(Xₖ)⟩ ]
-    
+
     Where:
         - I(X) is the integration of the full system.
         - ⟨I(Xₖ)⟩ is the average integration over all subsets of size k.
@@ -174,7 +180,10 @@ def calc_C_k_exact(cov_matrix: jnp.ndarray, I_n: float, k: int) -> float:
     EI_k = sum_I_k / num_combinations
     return LI_k - EI_k
 
-def calc_approximate_complexity(matrix: jnp.ndarray, num_points=1, gaussian_generator=jax_gaussian_generator()) -> float:
+
+def calc_approximate_complexity(
+    matrix: jnp.ndarray, num_points=1, gaussian_generator=jax_gaussian_generator()
+) -> float:
     """
     Calculates the approximate full complexity C(X).
 
@@ -184,13 +193,13 @@ def calc_approximate_complexity(matrix: jnp.ndarray, num_points=1, gaussian_gene
     systems indicating higher complexity.
 
         Cₙ(X) = ∑[ ⟨H(Xₖₙ)⟩ - (k/n) H(X) ]
-    
+
     Where:
         - H(X) is the entropy of the entire system.
         - ⟨H(Xₖₙ)⟩ is the average entropy over all n!/(k!(n - k)!) combinations of k variables.
-    
+
     Entropy calculation for a system with covariance matrix COV:
-    
+
         H(X) = 1/2 ln((2πe)ⁿ |COV|)
     """
     if matrix is None or matrix.size == 0:
@@ -235,7 +244,7 @@ def calc_approximate_complexity(matrix: jnp.ndarray, num_points=1, gaussian_gene
             complexity += 0.5 * dk * (c_k + c_prev)
             k_prev = k
             c_prev = c_k
-        
+
         # Final term k = n-1
         c_k = calc_C_k(cov_matrix, I_n, n - 1)
         dk = (n - 1) - k_prev
